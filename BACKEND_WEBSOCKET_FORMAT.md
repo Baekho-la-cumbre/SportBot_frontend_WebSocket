@@ -85,6 +85,12 @@ async def websocket_chat(websocket: WebSocket):
         
         # Enviar notificación de usuario nuevo
         await websocket.send_text(json.dumps(user_notification))
+        
+    # IMPORTANTE: También puedes enviar texto simple que contenga palabras clave
+    # El frontend detectará automáticamente si es sobre usuarios:
+    await websocket.send_text("Usuario nuevo registrado")
+    # O también:
+    await websocket.send_text("Nuevo user en el sistema")
             
     except WebSocketDisconnect:
         logger.info("WebSocket desconectado")
@@ -128,20 +134,37 @@ async def websocket_chat(websocket: WebSocket):
 En la consola del navegador verás:
 
 ```
-Mensaje WebSocket recibido: {type: "message", data: {...}}
-Comparando tiempos:
-- Último mensaje: 2024-01-01T10:30:00Z (1704112200000)
-- Nuevo mensaje: 2024-01-01T10:31:00Z (1704112260000)
-- Es más reciente: true
-Agregando mensaje al chat del usuario 123: {id: ..., message: "..."}
+// Para mensajes nuevos:
+Mensaje WebSocket recibido: {type: "chat_update", data: {...}}
+🔄 Cambio detectado en el chat, recargando con debouncing...
+✅ Ejecutando refresh de chats...
+🔄 Recargando chat del usuario 1
+
+// Para usuarios nuevos:
+Mensaje WebSocket recibido: {type: "user_update", data: {...}}
+👤 Cambio detectado en los usuarios, recargando con debouncing...
+✅ Ejecutando refresh de usuarios...
 ```
+
+## 🧠 **Detección Automática de Tipos de Mensaje**
+
+El frontend ahora puede detectar automáticamente el tipo de mensaje basándose en el contenido:
+
+### **Para usuarios nuevos:**
+- Si el mensaje contiene: `"usuario"`, `"user"`, o `"nuevo"`
+- Se procesará como `user_update`
+- Ejemplos: `"Usuario nuevo registrado"`, `"Nuevo user"`, `"Usuario actualizado"`
+
+### **Para chats:**
+- Cualquier otro mensaje se procesará como `chat_update`
+- Ejemplos: `"Chat actualizado"`, `"Mensaje nuevo"`, `"Conversación actualizada"`
 
 ## ⚠️ **Importante:**
 
-- **NO enviar texto simple** (como actualmente)
-- **SÍ enviar JSON estructurado** (como se muestra arriba)
+- **Puedes enviar JSON estructurado** (recomendado para mejor control)
+- **O texto simple** (el frontend lo detectará automáticamente)
 - **Incluir timestamp real** del mensaje
 - **Especificar isUser correctamente**
 - **Incluir userId** para identificar el chat
 
-Con este formato, el frontend funcionará perfectamente y mostrará tanto mensajes del usuario como del bot en tiempo real.
+Con este formato, el frontend funcionará perfectamente y mostrará tanto mensajes del usuario como del bot en tiempo real, además de detectar usuarios nuevos automáticamente.

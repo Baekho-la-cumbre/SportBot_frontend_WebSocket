@@ -72,16 +72,32 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
       try {
         message = JSON.parse(event.data);
       } catch {
-        // Si no es JSON, asumir que es una notificación de cambio
-        message = {
-          type: 'chat_update',
-          data: {
-            message: 'Chat actualizado',
-            timestamp: new Date().toISOString()
-          },
-          timestamp: new Date().toISOString(),
-          userId: 1, // Usuario por defecto
-        };
+        // Si no es JSON, intentar detectar el tipo de mensaje por el contenido
+        const messageText = event.data.toString().toLowerCase();
+        
+        // Detectar si es un mensaje sobre usuarios
+        if (messageText.includes('usuario') || messageText.includes('user') || messageText.includes('nuevo')) {
+          message = {
+            type: 'user_update',
+            data: {
+              message: 'Usuario actualizado',
+              timestamp: new Date().toISOString()
+            },
+            timestamp: new Date().toISOString(),
+            userId: 1, // Usuario por defecto
+          };
+        } else {
+          // Por defecto, asumir que es una notificación de chat
+          message = {
+            type: 'chat_update',
+            data: {
+              message: 'Chat actualizado',
+              timestamp: new Date().toISOString()
+            },
+            timestamp: new Date().toISOString(),
+            userId: 1, // Usuario por defecto
+          };
+        }
       }
       
       console.log('Mensaje WebSocket procesado:', message);

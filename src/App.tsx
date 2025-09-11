@@ -627,6 +627,34 @@ const AppContent: React.FC = () => {
             👤 Nuevo usuario detectado
           </div>
         )}
+        {/* Botón de prueba para simular usuario nuevo */}
+        <button 
+          onClick={() => {
+            console.log('🧪 Simulando usuario nuevo...');
+            const testMessage: WebSocketMessage = {
+              type: 'user_update',
+              data: {
+                message: 'Usuario nuevo registrado',
+                timestamp: new Date().toISOString()
+              },
+              timestamp: new Date().toISOString(),
+              userId: 999
+            };
+            // Simular el handler de mensaje
+            const handleMessage = (message: WebSocketMessage) => {
+              if (message.type === 'user_update') {
+                console.log('👤 Cambio detectado en los usuarios, recargando con debouncing...');
+                debouncedRefreshUsers();
+                setNewUserReceived(true);
+                setTimeout(() => setNewUserReceived(false), 3000);
+              }
+            };
+            handleMessage(testMessage);
+          }}
+          className="mt-2 px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+        >
+          🧪 Test Usuario Nuevo
+        </button>
       </div>
 
       {/* Lista de usuarios (sidebar) */}
