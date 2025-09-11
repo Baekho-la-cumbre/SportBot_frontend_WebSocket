@@ -103,6 +103,7 @@ async def websocket_chat(websocket: WebSocket):
 2. **Backend envía notificación** → Frontend detecta cambio
 3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
 4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
+5. **Debouncing aplicado** → Evita bucles infinitos y mejora performance
 
 ## 📊 **Flujo Completo:**
 
@@ -118,6 +119,9 @@ async def websocket_chat(websocket: WebSocket):
 - ✅ **Sin claves duplicadas** (IDs únicos)
 - ✅ **Filtro por tiempo** (solo mensajes más recientes)
 - ✅ **Actualización en tiempo real**
+- ✅ **Usuarios nuevos** aparecen automáticamente
+- ✅ **Debouncing inteligente** evita bucles infinitos
+- ✅ **Indicadores visuales** para mensajes y usuarios nuevos
 
 ## 🔍 **Debugging:**
 

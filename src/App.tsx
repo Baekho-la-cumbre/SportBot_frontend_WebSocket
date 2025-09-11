@@ -58,11 +58,17 @@ const AppContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newMessageReceived, setNewMessageReceived] = useState(false);
+  const [newUserReceived, setNewUserReceived] = useState(false);
   
   // Referencias para debouncing y prevenir bucles infinitos
   const refreshTimeoutRef = useRef<any>(null);
   const lastRefreshTimeRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
+  
+  // Referencias para debouncing de usuarios
+  const userRefreshTimeoutRef = useRef<any>(null);
+  const lastUserRefreshTimeRef = useRef<number>(0);
+  const isUserRefreshingRef = useRef<boolean>(false);
 
   // WebSocket context
   const {
@@ -140,6 +146,43 @@ const AppContent: React.FC = () => {
     
     fetchAllChats().finally(() => {
       isRefreshingRef.current = false;
+    });
+  }, []);
+
+  // Función con debouncing para usuarios (similar a chats)
+  const debouncedRefreshUsers = useCallback(() => {
+    // Evitar múltiples refreshes simultáneos
+    if (isUserRefreshingRef.current) {
+      console.log('🚫 Refresh de usuarios ya en progreso, saltando...');
+      return;
+    }
+
+    // Debouncing: solo refresh si han pasado al menos 2 segundos desde el último
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastUserRefreshTimeRef.current;
+    
+    if (timeSinceLastRefresh < 2000) {
+      console.log('🚫 Debouncing usuarios: esperando antes del próximo refresh...');
+      
+      // Cancelar timeout anterior si existe
+      if (userRefreshTimeoutRef.current) {
+        clearTimeout(userRefreshTimeoutRef.current);
+      }
+      
+      // Programar nuevo refresh
+      userRefreshTimeoutRef.current = setTimeout(() => {
+        debouncedRefreshUsers();
+      }, 2000 - timeSinceLastRefresh);
+      
+      return;
+    }
+
+    console.log('✅ Ejecutando refresh de usuarios...');
+    isUserRefreshingRef.current = true;
+    lastUserRefreshTimeRef.current = now;
+    
+    fetchUsers().finally(() => {
+      isUserRefreshingRef.current = false;
     });
   }, []);
 
@@ -306,14 +349,14 @@ const AppContent: React.FC = () => {
       
       // Procesar mensajes que indiquen cambios en los usuarios
       if (message.type === 'user_update') {
-        console.log('👤 Cambio detectado en los usuarios, recargando...');
+        console.log('👤 Cambio detectado en los usuarios, recargando con debouncing...');
         
-        // Recargar la lista de usuarios
-        fetchUsers();
+        // Usar debouncing para evitar bucles infinitos
+        debouncedRefreshUsers();
         
         // Mostrar indicador de actualización
-        setNewMessageReceived(true);
-        setTimeout(() => setNewMessageReceived(false), 3000);
+        setNewUserReceived(true);
+        setTimeout(() => setNewUserReceived(false), 3000);
       }
     };
 
@@ -577,6 +620,11 @@ const AppContent: React.FC = () => {
         {newMessageReceived && (
           <div className="mt-1 px-3 py-1 bg-green-600 text-white text-xs rounded animate-pulse">
             ✨ Nuevo mensaje recibido
+          </div>
+        )}
+        {newUserReceived && (
+          <div className="mt-1 px-3 py-1 bg-blue-600 text-white text-xs rounded animate-pulse">
+            👤 Nuevo usuario detectado
           </div>
         )}
       </div>
