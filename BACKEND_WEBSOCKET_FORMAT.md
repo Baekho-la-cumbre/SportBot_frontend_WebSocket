@@ -162,10 +162,10 @@ Mensaje WebSocket recibido: {type: "user_update", data: {...}}
 🔄 Polling: verificando mensajes nuevos...
 📝 No hay mensajes nuevos, saltando verificación de usuarios
 
-// Detección mejorada de mensajes nuevos:
-- Compara contenido y timestamp de mensajes
-- Evita falsos positivos por IDs diferentes
-- Lógica más robusta y confiable
+// Detección simplificada de mensajes nuevos:
+- Compara cantidad de mensajes (length)
+- Lógica simple y confiable
+- Funciona como antes cuando todo estaba bien
 ```
 
 ## 🧠 **Sistema Unificado de Detección Automática**

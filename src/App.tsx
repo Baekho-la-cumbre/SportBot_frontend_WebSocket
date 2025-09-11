@@ -271,14 +271,7 @@ const AppContent: React.FC = () => {
 
       // LÓGICA CONDICIONAL: Solo verificar usuarios si hay mensajes nuevos
       const previousMessages = chatHistory[userId] || [];
-      
-      // Comparar por contenido y timestamp para detectar mensajes realmente nuevos
-      const hasNewMessages = allMessages.some(newMsg => 
-        !previousMessages.some(prevMsg => 
-          prevMsg.message === newMsg.message && 
-          prevMsg.timestamp === newMsg.timestamp
-        )
-      );
+      const hasNewMessages = allMessages.length > previousMessages.length;
       
       if (hasNewMessages) {
         console.log('💬 Mensajes nuevos detectados, verificando usuarios...');
