@@ -71,16 +71,38 @@ async def websocket_chat(websocket: WebSocket):
             # Enviar notificación de cambio al frontend
             await websocket.send_text(json.dumps(change_notification))
             
+    # Ejemplo para notificar usuarios nuevos
+    async def notify_new_user(user_id: int):
+        user_notification = {
+            "type": "user_update",
+            "data": {
+                "message": "Usuario nuevo registrado",
+                "timestamp": datetime.now().isoformat()
+            },
+            "timestamp": datetime.now().isoformat() + "Z",
+            "userId": user_id
+        }
+        
+        # Enviar notificación de usuario nuevo
+        await websocket.send_text(json.dumps(user_notification))
+            
     except WebSocketDisconnect:
         logger.info("WebSocket desconectado")
 ```
 
 ### **✅ CÓMO FUNCIONA AHORA:**
 
+#### **Para cambios en el chat:**
 1. **Usuario envía mensaje** → Backend procesa
 2. **Backend envía notificación** → Frontend detecta cambio
 3. **Frontend recarga chat** → Muestra todos los mensajes actualizados
 4. **Sin duplicados** → Solo recarga completa del chat
+
+#### **Para cambios en los usuarios:**
+1. **Nuevo usuario se registra** → Backend procesa
+2. **Backend envía notificación** → Frontend detecta cambio
+3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
+4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
 
 ## 📊 **Flujo Completo:**
 

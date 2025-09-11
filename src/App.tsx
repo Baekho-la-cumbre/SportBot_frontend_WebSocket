@@ -244,7 +244,7 @@ const AppContent: React.FC = () => {
     const handleMessage = (message: WebSocketMessage) => {
       console.log('Mensaje WebSocket recibido:', message);
       
-      // Solo procesar mensajes que indiquen cambios en el chat
+      // Procesar mensajes que indiquen cambios en el chat
       if (message.type === 'message' || message.type === 'chat_update') {
         console.log('🔄 Cambio detectado en el chat, recargando...');
         
@@ -259,6 +259,18 @@ const AppContent: React.FC = () => {
         } else {
           console.log('❌ No hay usuario seleccionado, no se puede recargar el chat');
         }
+      }
+      
+      // Procesar mensajes que indiquen cambios en los usuarios
+      if (message.type === 'user_update') {
+        console.log('👤 Cambio detectado en los usuarios, recargando...');
+        
+        // Recargar la lista de usuarios
+        fetchUsers();
+        
+        // Mostrar indicador de actualización
+        setNewMessageReceived(true);
+        setTimeout(() => setNewMessageReceived(false), 3000);
       }
     };
 
