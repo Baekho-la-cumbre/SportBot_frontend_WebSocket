@@ -106,10 +106,11 @@ async def websocket_chat(websocket: WebSocket):
 
 #### **Para cambios en los usuarios:**
 1. **Nuevo usuario se registra** → Backend procesa
-2. **Backend envía notificación** → Frontend detecta cambio
+2. **Frontend detecta automáticamente** → Polling cada 10 segundos + WebSocket
 3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
 4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
 5. **Debouncing aplicado** → Evita bucles infinitos y mejora performance
+6. **Detección inteligente** → Compara IDs para detectar usuarios nuevos
 
 ## 📊 **Flujo Completo:**
 
@@ -140,20 +141,35 @@ Mensaje WebSocket recibido: {type: "chat_update", data: {...}}
 ✅ Ejecutando refresh de chats...
 🔄 Recargando chat del usuario 1
 
-// Para usuarios nuevos:
+// Para usuarios nuevos (WebSocket):
 Mensaje WebSocket recibido: {type: "user_update", data: {...}}
 👤 Cambio detectado en los usuarios, recargando con debouncing...
 ✅ Ejecutando refresh de usuarios...
+
+// Para usuarios nuevos (Polling automático):
+🔄 Polling automático: verificando usuarios nuevos...
+🆕 Usuarios nuevos detectados automáticamente!
+✅ Ejecutando refresh de usuarios...
 ```
 
-## 🧠 **Detección Automática de Tipos de Mensaje**
+## 🧠 **Detección Automática de Usuarios Nuevos**
 
-El frontend ahora puede detectar automáticamente el tipo de mensaje basándose en el contenido:
+El frontend ahora detecta usuarios nuevos de **3 formas automáticas**:
 
-### **Para usuarios nuevos:**
+### **1. WebSocket (Tiempo Real):**
 - Si el mensaje contiene: `"usuario"`, `"user"`, o `"nuevo"`
 - Se procesará como `user_update`
 - Ejemplos: `"Usuario nuevo registrado"`, `"Nuevo user"`, `"Usuario actualizado"`
+
+### **2. Polling Automático:**
+- Verifica usuarios nuevos cada **10 segundos**
+- Compara IDs de usuarios actuales vs nuevos
+- Detecta automáticamente usuarios que aparecieron
+
+### **3. Detección Inteligente:**
+- Compara la lista actual de usuarios con la nueva
+- Identifica IDs que no existían antes
+- Muestra indicador visual automáticamente
 
 ### **Para chats:**
 - Cualquier otro mensaje se procesará como `chat_update`
