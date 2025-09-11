@@ -57,6 +57,7 @@ const AppContent: React.FC = () => {
   const [chatSummaries, setChatSummaries] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newMessageReceived, setNewMessageReceived] = useState(false);
 
   // WebSocket context
   const {
@@ -243,11 +244,30 @@ const AppContent: React.FC = () => {
               isUser: message.data.isUser || false,
             };
 
+            // Si tenemos un userId específico, agregarlo a ese chat
             if (message.userId) {
+              console.log(`Agregando mensaje al chat del usuario ${message.userId}:`, newChatMessage);
               setChatHistory(prev => ({
                 ...prev,
                 [message.userId!]: [...(prev[message.userId!] || []), newChatMessage]
               }));
+              // Mostrar indicador de nuevo mensaje
+              setNewMessageReceived(true);
+              setTimeout(() => setNewMessageReceived(false), 3000);
+            } else {
+              // Si no tenemos userId, agregar al chat seleccionado actualmente
+              if (selectedUserId) {
+                console.log(`Agregando mensaje al chat seleccionado ${selectedUserId}:`, newChatMessage);
+                setChatHistory(prev => ({
+                  ...prev,
+                  [selectedUserId]: [...(prev[selectedUserId] || []), newChatMessage]
+                }));
+                // Mostrar indicador de nuevo mensaje
+                setNewMessageReceived(true);
+                setTimeout(() => setNewMessageReceived(false), 3000);
+              } else {
+                console.log('No hay usuario seleccionado, mensaje no se puede agregar:', newChatMessage);
+              }
             }
           }
           break;
@@ -334,7 +354,7 @@ const AppContent: React.FC = () => {
     onChatUpdate(handleChatUpdate);
     onUserUpdate(handleUserUpdate);
     onNotification(handleNotification);
-  }, [onMessage, onChatUpdate, onUserUpdate, onNotification]);
+  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId]);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -485,6 +505,11 @@ const AppContent: React.FC = () => {
         {reconnectAttempts > 0 && !wsError?.includes('Backend no disponible') && (
           <div className="mt-1 px-3 py-1 bg-yellow-600 text-white text-xs rounded">
             Reintento {reconnectAttempts}/5
+          </div>
+        )}
+        {newMessageReceived && (
+          <div className="mt-1 px-3 py-1 bg-green-600 text-white text-xs rounded animate-pulse">
+            ✨ Nuevo mensaje recibido
           </div>
         )}
       </div>

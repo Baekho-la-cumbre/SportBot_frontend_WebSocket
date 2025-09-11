@@ -73,15 +73,19 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
         message = JSON.parse(event.data);
       } catch {
         // Si no es JSON, es una respuesta de texto del backend
+        // Crear un mensaje estructurado para el chat
         message = {
           type: 'message',
           data: {
             message: event.data,
-            isUser: false,
+            isUser: false, // Mensaje del bot
           },
           timestamp: new Date().toISOString(),
+          userId: undefined, // Se determinará en el handler
         };
       }
+      
+      console.log('Mensaje WebSocket procesado:', message);
       
       setState(prev => ({
         ...prev,
