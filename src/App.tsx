@@ -1,7 +1,7 @@
 
 import './App.css'
 import './index.css'
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { config } from './config';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { useWebSocketContext } from './hooks/useWebSocketContext';
@@ -58,6 +58,11 @@ const AppContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newMessageReceived, setNewMessageReceived] = useState(false);
+  
+  // Referencias para debouncing y prevenir bucles infinitos
+  const refreshTimeoutRef = useRef<any>(null);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
 
   // WebSocket context
   const {
@@ -100,6 +105,43 @@ const AppContent: React.FC = () => {
       setError('Error al cargar los chats');
     }
   };
+
+  // Función con debouncing para evitar bucles infinitos
+  const debouncedRefreshChats = useCallback(() => {
+    // Evitar múltiples refreshes simultáneos
+    if (isRefreshingRef.current) {
+      console.log('🚫 Refresh ya en progreso, saltando...');
+      return;
+    }
+
+    // Debouncing: solo refresh si han pasado al menos 3 segundos desde el último
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshTimeRef.current;
+    
+    if (timeSinceLastRefresh < 3000) {
+      console.log('🚫 Debouncing: esperando antes del próximo refresh...');
+      
+      // Cancelar timeout anterior si existe
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      // Programar nuevo refresh
+      refreshTimeoutRef.current = setTimeout(() => {
+        debouncedRefreshChats();
+      }, 3000 - timeSinceLastRefresh);
+      
+      return;
+    }
+
+    console.log('✅ Ejecutando refresh de chats...');
+    isRefreshingRef.current = true;
+    lastRefreshTimeRef.current = now;
+    
+    fetchAllChats().finally(() => {
+      isRefreshingRef.current = false;
+    });
+  }, []);
 
   // Función para obtener el historial de chat de un usuario específico
   const fetchUserChatHistory = useCallback(async (userId: number) => {
@@ -246,9 +288,12 @@ const AppContent: React.FC = () => {
       
       // Procesar mensajes que indiquen cambios en el chat
       if (message.type === 'message' || message.type === 'chat_update') {
-        console.log('🔄 Cambio detectado en el chat, recargando...');
+        console.log('🔄 Cambio detectado en el chat, recargando con debouncing...');
         
-        // Recargar el chat del usuario seleccionado
+        // Usar debouncing para evitar bucles infinitos
+        debouncedRefreshChats();
+        
+        // Recargar el chat del usuario seleccionado (sin debouncing para respuesta inmediata)
         if (selectedUserId) {
           console.log(`🔄 Recargando chat del usuario ${selectedUserId}`);
           fetchUserChatHistory(selectedUserId);
@@ -256,8 +301,6 @@ const AppContent: React.FC = () => {
           // Mostrar indicador de actualización
           setNewMessageReceived(true);
           setTimeout(() => setNewMessageReceived(false), 3000);
-        } else {
-          console.log('❌ No hay usuario seleccionado, no se puede recargar el chat');
         }
       }
       
@@ -277,6 +320,19 @@ const AppContent: React.FC = () => {
     // Handler para actualizaciones de chat
     const handleChatUpdate = (message: WebSocketMessage) => {
       console.log('Actualización de chat recibida:', message);
+      
+      // Usar debouncing para evitar bucles infinitos
+      debouncedRefreshChats();
+      
+      // Si hay un usuario seleccionado, recargar su historial
+      if (selectedUserId && message.data && 'userId' in message.data && message.data.userId === selectedUserId) {
+        console.log(`🔄 Recargando historial del usuario seleccionado ${selectedUserId}`);
+        fetchUserChatHistory(selectedUserId);
+        
+        // Mostrar indicador de actualización
+        setNewMessageReceived(true);
+        setTimeout(() => setNewMessageReceived(false), 3000);
+      }
       
       if (message.data && 'chatId' in message.data) {
         const chatUpdate: ChatUpdate = {
