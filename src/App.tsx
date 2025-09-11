@@ -269,15 +269,28 @@ const AppContent: React.FC = () => {
         [userId]: allMessages
       }));
 
-      // Detectar si hay mensajes de usuarios que no están en la lista actual
-      const messageUserIds = new Set(allMessages.map(msg => msg.userId).filter((id): id is number => id !== undefined));
-      const currentUserIds = new Set(users.map(user => user.id));
-      const newUserIds = Array.from(messageUserIds).filter(id => !currentUserIds.has(id));
+      // LÓGICA CONDICIONAL: Solo verificar usuarios si hay mensajes nuevos
+      const previousMessages = chatHistory[userId] || [];
+      const hasNewMessages = allMessages.length > previousMessages.length;
       
-      if (newUserIds.length > 0) {
-        console.log('🆕 Usuarios nuevos detectados en mensajes:', newUserIds);
-        // Trigger refresh de usuarios para incluir los nuevos
-        debouncedRefreshUsers();
+      if (hasNewMessages) {
+        console.log('💬 Mensajes nuevos detectados, verificando usuarios...');
+        
+        // Detectar si hay mensajes de usuarios que no están en la lista actual
+        const messageUserIds = new Set(allMessages.map(msg => msg.userId).filter((id): id is number => id !== undefined));
+        const currentUserIds = new Set(users.map(user => user.id));
+        const newUserIds = Array.from(messageUserIds).filter(id => !currentUserIds.has(id));
+        
+        if (newUserIds.length > 0) {
+          console.log('🆕 Usuario nuevo detectado en mensajes:', newUserIds);
+          console.log('👤 Actualizando lista de usuarios automáticamente...');
+          // Trigger refresh de usuarios para incluir los nuevos
+          debouncedRefreshUsers();
+        } else {
+          console.log('✅ Todos los usuarios de los mensajes ya están en el landing');
+        }
+      } else {
+        console.log('📝 No hay mensajes nuevos, saltando verificación de usuarios');
       }
 
     } catch (err) {
@@ -508,16 +521,13 @@ const AppContent: React.FC = () => {
     loadInitialData();
   }, []);
 
-  // Polling unificado para detectar mensajes y usuarios nuevos cada 30 segundos
+  // Polling para detectar mensajes nuevos cada 30 segundos
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected && !isUserRefreshingRef.current) {
-        console.log('🔄 Polling unificado: verificando mensajes y usuarios nuevos...');
+        console.log('🔄 Polling: verificando mensajes nuevos...');
         
-        // Verificar usuarios nuevos (que pueden haber enviado mensajes)
-        fetchUsers();
-        
-        // Si hay un usuario seleccionado, también verificar sus mensajes
+        // Solo verificar mensajes - la verificación de usuarios será condicional
         if (selectedUserId) {
           fetchUserChatHistory(selectedUserId);
         }
