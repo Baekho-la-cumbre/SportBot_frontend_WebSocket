@@ -18,6 +18,7 @@ export interface ChatMessage {
 
 export interface UserUpdate {
   id: number;
+  username?: string;
   nombre?: string;
   name?: string;
   telefono?: string;

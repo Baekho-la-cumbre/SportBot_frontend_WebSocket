@@ -10,8 +10,9 @@ import type { WebSocketMessage, UserUpdate, ChatUpdate } from './types/websocket
 // Definir tipos TypeScript basados en los endpoints reales del backend
 interface User {
   id: number;
-  nombre?: string; // Campo que puede venir del backend
-  name?: string;   // Campo alternativo
+  username?: string; // Campo principal del usuario
+  nombre?: string;   // Campo alternativo (mantener compatibilidad)
+  name?: string;     // Campo alternativo
   telefono?: string; // Número de teléfono del usuario
   // Otros campos que pueda tener el usuario
 }
@@ -312,6 +313,7 @@ const AppContent: React.FC = () => {
             // Agregar nuevo usuario
             return [...prev, {
               id: userUpdate.id,
+              username: userUpdate.username,
               nombre: userUpdate.nombre,
               name: userUpdate.name,
               telefono: userUpdate.telefono,
@@ -375,7 +377,7 @@ const AppContent: React.FC = () => {
 
   // Función para obtener el nombre del usuario
   const getUserName = (user: User) => {
-    return user.nombre || user.name || `Usuario ${user.id}`;
+    return user.username || user.nombre || user.name || `Usuario ${user.id}`;
   };
 
   // Función para obtener el último mensaje de un usuario
@@ -468,11 +470,19 @@ const AppContent: React.FC = () => {
           {isConnected ? '🟢 Conectado' : isConnecting ? '🟡 Conectando...' : '🔴 Desconectado'}
         </div>
         {wsError && (
-          <div className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded">
+          <div className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded max-w-xs">
             {wsError}
+            {wsError.includes('Backend no disponible') && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="ml-2 px-2 py-1 bg-white text-red-600 rounded text-xs hover:bg-gray-100"
+              >
+                Reintentar
+              </button>
+            )}
           </div>
         )}
-        {reconnectAttempts > 0 && (
+        {reconnectAttempts > 0 && !wsError?.includes('Backend no disponible') && (
           <div className="mt-1 px-3 py-1 bg-yellow-600 text-white text-xs rounded">
             Reintento {reconnectAttempts}/5
           </div>

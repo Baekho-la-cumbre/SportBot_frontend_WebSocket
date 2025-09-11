@@ -162,8 +162,8 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
         }));
         clearTimeouts();
 
-        // Intentar reconectar si no fue un cierre intencional
-        if (event.code !== 1000 && state.reconnectAttempts < maxReconnectAttempts) {
+        // Solo intentar reconectar si no fue un cierre intencional Y el backend está disponible
+        if (event.code !== 1000 && event.code !== 1006 && state.reconnectAttempts < maxReconnectAttempts) {
           setState(prev => ({
             ...prev,
             reconnectAttempts: prev.reconnectAttempts + 1,
@@ -173,6 +173,12 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
             console.log(`Intentando reconectar... (${state.reconnectAttempts + 1}/${maxReconnectAttempts})`);
             connect();
           }, reconnectInterval);
+        } else if (event.code === 1006) {
+          // Error 1006: Backend no disponible, no intentar reconectar
+          setState(prev => ({
+            ...prev,
+            error: 'Backend no disponible - Verifica que el servidor esté corriendo',
+          }));
         } else if (state.reconnectAttempts >= maxReconnectAttempts) {
           setState(prev => ({
             ...prev,
