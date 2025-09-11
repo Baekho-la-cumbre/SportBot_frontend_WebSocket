@@ -1,7 +1,7 @@
 
 import './App.css'
 import './index.css'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { config } from './config';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { useWebSocketContext } from './hooks/useWebSocketContext';
@@ -102,7 +102,7 @@ const AppContent: React.FC = () => {
   };
 
   // Función para obtener el historial de chat de un usuario específico
-  const fetchUserChatHistory = async (userId: number) => {
+  const fetchUserChatHistory = useCallback(async (userId: number) => {
     try {
       console.log(`Intentando obtener historial para usuario ${userId}`);
       
@@ -178,7 +178,7 @@ const AppContent: React.FC = () => {
       console.error('Error fetching user chat history:', err);
       setError('Error al cargar el historial del chat');
     }
-  };
+  }, [chatSummaries]);
 
   // Función para formatear fecha como WhatsApp
   const formatMessageDate = (timestamp: string) => {
@@ -245,7 +245,7 @@ const AppContent: React.FC = () => {
       
       switch (message.type) {
         case 'message':
-          if (message.data && message.data.message) {
+          if (message.data && 'message' in message.data && 'isUser' in message.data) {
             // Nuevo mensaje de chat
             const newChatMessage: ChatMessage = {
               id: Date.now() + Math.random(), // ID único temporal
@@ -254,30 +254,48 @@ const AppContent: React.FC = () => {
               isUser: message.data.isUser || false,
             };
 
-            // Función para verificar si el mensaje ya existe (evitar duplicados)
-            const messageExists = (userId: number, newMessage: ChatMessage) => {
+            // Función para verificar si el mensaje ya existe en el historial
+            const messageExistsInHistory = (userId: number, newMessage: ChatMessage) => {
               const currentChatHistory = chatHistory[userId] || [];
-              return currentChatHistory.some(msg => 
-                msg.message === newMessage.message && 
-                Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000 // 5 segundos de tolerancia
-              );
+              
+              return currentChatHistory.some(existingMsg => {
+                // Comparar contenido del mensaje
+                const sameContent = existingMsg.message === newMessage.message;
+                
+                // Comparar si es del mismo tipo (usuario o bot)
+                const sameType = existingMsg.isUser === newMessage.isUser;
+                
+                // Comparar timestamps con tolerancia de 10 segundos
+                const existingTime = new Date(existingMsg.timestamp).getTime();
+                const newTime = new Date(newMessage.timestamp).getTime();
+                const timeDiff = Math.abs(existingTime - newTime);
+                const sameTime = timeDiff < 10000; // 10 segundos de tolerancia
+                
+                console.log(`Comparando mensajes:`);
+                console.log(`- Existente: "${existingMsg.message}" (${existingMsg.timestamp}) - Usuario: ${existingMsg.isUser}`);
+                console.log(`- Nuevo: "${newMessage.message}" (${newMessage.timestamp}) - Usuario: ${newMessage.isUser}`);
+                console.log(`- Mismo contenido: ${sameContent}, Mismo tipo: ${sameType}, Mismo tiempo: ${sameTime} (diff: ${timeDiff}ms)`);
+                
+                return sameContent && sameType && sameTime;
+              });
             };
 
             // Función para verificar si el mensaje es realmente nuevo (no del historial)
-            const isNewMessage = (newMessage: ChatMessage) => {
+            const isTrulyNewMessage = (newMessage: ChatMessage) => {
               const now = new Date().getTime();
               const messageTime = new Date(newMessage.timestamp).getTime();
               const timeDiff = now - messageTime;
               
-              // Solo considerar como nuevo si fue enviado en los últimos 30 segundos
-              return timeDiff < 30000;
+              // Solo considerar como nuevo si fue enviado en los últimos 60 segundos
+              // Esto permite que mensajes recientes se muestren, pero evita duplicados del historial
+              return timeDiff < 60000;
             };
 
-            // Solo agregar mensajes que sean realmente nuevos
-            if (isNewMessage(newChatMessage)) {
+            // Solo agregar mensajes que sean realmente nuevos y no existan en el historial
+            if (isTrulyNewMessage(newChatMessage)) {
               // Si tenemos un userId específico, agregarlo a ese chat
               if (message.userId) {
-                if (!messageExists(message.userId, newChatMessage)) {
+                if (!messageExistsInHistory(message.userId, newChatMessage)) {
                   console.log(`✅ NUEVO mensaje agregado al chat del usuario ${message.userId}:`, newChatMessage);
                   setChatHistory(prev => ({
                     ...prev,
@@ -287,12 +305,12 @@ const AppContent: React.FC = () => {
                   setNewMessageReceived(true);
                   setTimeout(() => setNewMessageReceived(false), 3000);
                 } else {
-                  console.log(`❌ Mensaje ya existe, no se agrega al chat del usuario ${message.userId}`);
+                  console.log(`❌ Mensaje ya existe en el historial, no se agrega al chat del usuario ${message.userId}`);
                 }
               } else {
                 // Si no tenemos userId, agregar al chat seleccionado actualmente
                 if (selectedUserId) {
-                  if (!messageExists(selectedUserId, newChatMessage)) {
+                  if (!messageExistsInHistory(selectedUserId, newChatMessage)) {
                     console.log(`✅ NUEVO mensaje agregado al chat seleccionado ${selectedUserId}:`, newChatMessage);
                     setChatHistory(prev => ({
                       ...prev,
@@ -302,7 +320,7 @@ const AppContent: React.FC = () => {
                     setNewMessageReceived(true);
                     setTimeout(() => setNewMessageReceived(false), 3000);
                   } else {
-                    console.log(`❌ Mensaje ya existe, no se agrega al chat seleccionado ${selectedUserId}`);
+                    console.log(`❌ Mensaje ya existe en el historial, no se agrega al chat seleccionado ${selectedUserId}`);
                   }
                 } else {
                   console.log('❌ No hay usuario seleccionado, mensaje no se puede agregar:', newChatMessage);
@@ -325,8 +343,16 @@ const AppContent: React.FC = () => {
     const handleChatUpdate = (message: WebSocketMessage) => {
       console.log('Actualización de chat recibida:', message);
       
-      if (message.data) {
-        const chatUpdate: ChatUpdate = message.data;
+      if (message.data && 'chatId' in message.data) {
+        const chatUpdate: ChatUpdate = {
+          id: 0, // ID por defecto
+          chatId: message.data.chatId,
+          ultimoMensaje: message.data.ultimoMensaje,
+          totalMensajes: message.data.totalMensajes,
+          usuarioId: message.data.usuarioId,
+          fechaCreacion: new Date().toISOString(),
+          fechaActualizcion: new Date().toISOString()
+        };
         setChatSummaries(prev => {
           const existingIndex = prev.findIndex(chat => chat.id === chatUpdate.id);
           if (existingIndex >= 0) {
@@ -359,8 +385,16 @@ const AppContent: React.FC = () => {
     const handleUserUpdate = (message: WebSocketMessage) => {
       console.log('Actualización de usuario recibida:', message);
       
-      if (message.data) {
-        const userUpdate: UserUpdate = message.data;
+      if (message.data && 'id' in message.data) {
+        const userUpdate: UserUpdate = {
+          id: message.data.id,
+          username: message.data.username,
+          nombre: message.data.nombre,
+          name: message.data.name,
+          telefono: message.data.telefono,
+          isOnline: message.data.isOnline,
+          lastSeen: message.data.lastSeen
+        };
         setUsers(prev => {
           const existingIndex = prev.findIndex(user => user.id === userUpdate.id);
           if (existingIndex >= 0) {
@@ -396,7 +430,7 @@ const AppContent: React.FC = () => {
     onChatUpdate(handleChatUpdate);
     onUserUpdate(handleUserUpdate);
     onNotification(handleNotification);
-  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId]);
+  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, chatHistory]);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -424,7 +458,7 @@ const AppContent: React.FC = () => {
     if (selectedUserId) {
       fetchUserChatHistory(selectedUserId);
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, fetchUserChatHistory]);
 
   // Marcar como leído cuando se selecciona un usuario
   useEffect(() => {
