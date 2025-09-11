@@ -254,60 +254,62 @@ const AppContent: React.FC = () => {
               isUser: message.data.isUser || false,
             };
 
-            // Función para verificar si el mensaje es más reciente que el último mostrado
-            const shouldAddMessage = (userId: number, newMessage: ChatMessage) => {
+            // Función para verificar si el mensaje ya existe (evitar duplicados)
+            const messageExists = (userId: number, newMessage: ChatMessage) => {
               const currentChatHistory = chatHistory[userId] || [];
-              
-              if (currentChatHistory.length === 0) {
-                console.log(`Chat vacío para usuario ${userId}, agregando mensaje`);
-                return true;
-              }
-              
-              // Obtener el último mensaje del chat
-              const lastMessage = currentChatHistory[currentChatHistory.length - 1];
-              const lastMessageTime = new Date(lastMessage.timestamp).getTime();
-              const newMessageTime = new Date(newMessage.timestamp).getTime();
-              
-              console.log(`Comparando tiempos:`);
-              console.log(`- Último mensaje: ${lastMessage.timestamp} (${lastMessageTime})`);
-              console.log(`- Nuevo mensaje: ${newMessage.timestamp} (${newMessageTime})`);
-              console.log(`- Es más reciente: ${newMessageTime > lastMessageTime}`);
-              
-              return newMessageTime > lastMessageTime;
+              return currentChatHistory.some(msg => 
+                msg.message === newMessage.message && 
+                Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000 // 5 segundos de tolerancia
+              );
             };
 
-            // Si tenemos un userId específico, agregarlo a ese chat
-            if (message.userId) {
-              if (shouldAddMessage(message.userId, newChatMessage)) {
-                console.log(`Agregando mensaje al chat del usuario ${message.userId}:`, newChatMessage);
-                setChatHistory(prev => ({
-                  ...prev,
-                  [message.userId!]: [...(prev[message.userId!] || []), newChatMessage]
-                }));
-                // Mostrar indicador de nuevo mensaje
-                setNewMessageReceived(true);
-                setTimeout(() => setNewMessageReceived(false), 3000);
-              } else {
-                console.log(`Mensaje no es más reciente, no se agrega al chat del usuario ${message.userId}`);
-              }
-            } else {
-              // Si no tenemos userId, agregar al chat seleccionado actualmente
-              if (selectedUserId) {
-                if (shouldAddMessage(selectedUserId, newChatMessage)) {
-                  console.log(`Agregando mensaje al chat seleccionado ${selectedUserId}:`, newChatMessage);
+            // Función para verificar si el mensaje es realmente nuevo (no del historial)
+            const isNewMessage = (newMessage: ChatMessage) => {
+              const now = new Date().getTime();
+              const messageTime = new Date(newMessage.timestamp).getTime();
+              const timeDiff = now - messageTime;
+              
+              // Solo considerar como nuevo si fue enviado en los últimos 30 segundos
+              return timeDiff < 30000;
+            };
+
+            // Solo agregar mensajes que sean realmente nuevos
+            if (isNewMessage(newChatMessage)) {
+              // Si tenemos un userId específico, agregarlo a ese chat
+              if (message.userId) {
+                if (!messageExists(message.userId, newChatMessage)) {
+                  console.log(`✅ NUEVO mensaje agregado al chat del usuario ${message.userId}:`, newChatMessage);
                   setChatHistory(prev => ({
                     ...prev,
-                    [selectedUserId]: [...(prev[selectedUserId] || []), newChatMessage]
+                    [message.userId!]: [...(prev[message.userId!] || []), newChatMessage]
                   }));
                   // Mostrar indicador de nuevo mensaje
                   setNewMessageReceived(true);
                   setTimeout(() => setNewMessageReceived(false), 3000);
                 } else {
-                  console.log(`Mensaje no es más reciente, no se agrega al chat seleccionado ${selectedUserId}`);
+                  console.log(`❌ Mensaje ya existe, no se agrega al chat del usuario ${message.userId}`);
                 }
               } else {
-                console.log('No hay usuario seleccionado, mensaje no se puede agregar:', newChatMessage);
+                // Si no tenemos userId, agregar al chat seleccionado actualmente
+                if (selectedUserId) {
+                  if (!messageExists(selectedUserId, newChatMessage)) {
+                    console.log(`✅ NUEVO mensaje agregado al chat seleccionado ${selectedUserId}:`, newChatMessage);
+                    setChatHistory(prev => ({
+                      ...prev,
+                      [selectedUserId]: [...(prev[selectedUserId] || []), newChatMessage]
+                    }));
+                    // Mostrar indicador de nuevo mensaje
+                    setNewMessageReceived(true);
+                    setTimeout(() => setNewMessageReceived(false), 3000);
+                  } else {
+                    console.log(`❌ Mensaje ya existe, no se agrega al chat seleccionado ${selectedUserId}`);
+                  }
+                } else {
+                  console.log('❌ No hay usuario seleccionado, mensaje no se puede agregar:', newChatMessage);
+                }
               }
+            } else {
+              console.log(`⏰ Mensaje del historial (no es nuevo), no se agrega:`, newChatMessage);
             }
           }
           break;

@@ -50,7 +50,7 @@ async def websocket_chat(websocket: WebSocket):
             # Recibir mensaje del usuario
             user_message = await websocket.receive_text()
             
-            # Crear mensaje del usuario
+            # IMPORTANTE: Enviar mensaje del usuario al frontend PRIMERO
             user_msg = {
                 "type": "message",
                 "data": {
@@ -84,6 +84,16 @@ async def websocket_chat(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("WebSocket desconectado")
 ```
+
+### **⚠️ PROBLEMA ACTUAL:**
+
+El backend actual solo envía respuestas del bot, pero **NO envía los mensajes del usuario**. Por eso el frontend solo muestra mensajes del bot.
+
+### **✅ SOLUCIÓN:**
+
+El backend debe enviar **AMBOS** tipos de mensajes:
+1. **Mensaje del usuario** (cuando el usuario envía algo)
+2. **Respuesta del bot** (cuando el bot responde)
 
 ## 📊 **Flujo Completo:**
 

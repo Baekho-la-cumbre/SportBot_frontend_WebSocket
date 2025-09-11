@@ -81,7 +81,7 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
             isUser: false, // Mensaje del bot (por defecto)
           },
           timestamp: new Date().toISOString(),
-          userId: undefined, // Se determinará en el handler
+          userId: 1, // Usuario por defecto para el backend actual
         };
       }
       
