@@ -11,6 +11,12 @@ node_modules/
 dist
 dist-ssr
 *.local
+ENV_SETUP.md
+IMPLEMENTATION_SUMMARY.md
+WEBSOCKET_TEST_GUIDE.md
+WEBSOCKET_IMPLEMENTATION.md
+
+
 
 package-lock.json
 

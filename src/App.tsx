@@ -3,6 +3,9 @@ import './App.css'
 import './index.css'
 import React, { useState, useEffect } from "react";
 import { config } from './config';
+import { WebSocketProvider } from './contexts/WebSocketContext';
+import { useWebSocketContext } from './hooks/useWebSocketContext';
+import type { WebSocketMessage, UserUpdate, ChatUpdate } from './types/websocket';
 
 // Definir tipos TypeScript basados en los endpoints reales del backend
 interface User {
@@ -46,13 +49,25 @@ interface ChatSummaryResponse {
   }>;
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatHistory>({});
   const [chatSummaries, setChatSummaries] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // WebSocket context
+  const {
+    isConnected,
+    isConnecting,
+    error: wsError,
+    reconnectAttempts,
+    onMessage,
+    onChatUpdate,
+    onUserUpdate,
+    onNotification,
+  } = useWebSocketContext();
 
   // Función para obtener todos los usuarios
   const fetchUsers = async () => {
@@ -210,6 +225,115 @@ const App: React.FC = () => {
     return groups;
   };
 
+  // WebSocket event handlers
+  useEffect(() => {
+    // Handler para mensajes generales
+    const handleMessage = (message: WebSocketMessage) => {
+      console.log('Mensaje WebSocket recibido:', message);
+      
+      switch (message.type) {
+        case 'message':
+          if (message.data && message.data.message) {
+            // Nuevo mensaje de chat
+            const newChatMessage: ChatMessage = {
+              id: Date.now(), // ID temporal
+              message: message.data.message,
+              timestamp: message.timestamp,
+              isUser: message.data.isUser || false,
+            };
+
+            if (message.userId) {
+              setChatHistory(prev => ({
+                ...prev,
+                [message.userId!]: [...(prev[message.userId!] || []), newChatMessage]
+              }));
+            }
+          }
+          break;
+        case 'notification':
+          console.log('Notificación recibida:', message.data);
+          break;
+        default:
+          console.log('Tipo de mensaje no manejado:', message.type);
+      }
+    };
+
+    // Handler para actualizaciones de chat
+    const handleChatUpdate = (message: WebSocketMessage) => {
+      console.log('Actualización de chat recibida:', message);
+      
+      if (message.data) {
+        const chatUpdate: ChatUpdate = message.data;
+        setChatSummaries(prev => {
+          const existingIndex = prev.findIndex(chat => chat.id === chatUpdate.id);
+          if (existingIndex >= 0) {
+            // Actualizar chat existente
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              ultimoMensaje: chatUpdate.ultimoMensaje,
+              totalMensajes: chatUpdate.totalMensajes,
+              fechaActualizcion: chatUpdate.fechaActualizcion,
+            };
+            return updated;
+          } else {
+            // Agregar nuevo chat
+            return [...prev, {
+              id: chatUpdate.id,
+              chatId: chatUpdate.chatId,
+              ultimoMensaje: chatUpdate.ultimoMensaje,
+              totalMensajes: chatUpdate.totalMensajes,
+              usuarioId: chatUpdate.usuarioId,
+              fechaCreacion: chatUpdate.fechaCreacion,
+              fechaActualizcion: chatUpdate.fechaActualizcion,
+            }];
+          }
+        });
+      }
+    };
+
+    // Handler para actualizaciones de usuario
+    const handleUserUpdate = (message: WebSocketMessage) => {
+      console.log('Actualización de usuario recibida:', message);
+      
+      if (message.data) {
+        const userUpdate: UserUpdate = message.data;
+        setUsers(prev => {
+          const existingIndex = prev.findIndex(user => user.id === userUpdate.id);
+          if (existingIndex >= 0) {
+            // Actualizar usuario existente
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              ...userUpdate,
+            };
+            return updated;
+          } else {
+            // Agregar nuevo usuario
+            return [...prev, {
+              id: userUpdate.id,
+              nombre: userUpdate.nombre,
+              name: userUpdate.name,
+              telefono: userUpdate.telefono,
+            }];
+          }
+        });
+      }
+    };
+
+    // Handler para notificaciones
+    const handleNotification = (message: WebSocketMessage) => {
+      console.log('Notificación recibida:', message);
+      // Aquí podrías mostrar notificaciones toast o actualizar el estado
+    };
+
+    // Registrar event listeners
+    onMessage(handleMessage);
+    onChatUpdate(handleChatUpdate);
+    onUserUpdate(handleUserUpdate);
+    onNotification(handleNotification);
+  }, [onMessage, onChatUpdate, onUserUpdate, onNotification]);
+
   // Cargar datos al montar el componente
   useEffect(() => {
     const loadInitialData = async () => {
@@ -290,12 +414,16 @@ const App: React.FC = () => {
     return '';
   };
 
+
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-900 text-gray-100 items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p className="text-xl text-blue-400">Cargando chats...</p>
+          {isConnecting && (
+            <p className="text-sm text-gray-400 mt-2">Conectando WebSocket...</p>
+          )}
         </div>
       </div>
     );
@@ -328,8 +456,31 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
-             {/* Lista de usuarios (sidebar) */}
-       <div className="w-1/4 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto shadow-lg">
+      {/* Indicador de estado WebSocket */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+          isConnected 
+            ? 'bg-green-500 text-white' 
+            : isConnecting 
+            ? 'bg-yellow-500 text-black' 
+            : 'bg-red-500 text-white'
+        }`}>
+          {isConnected ? '🟢 Conectado' : isConnecting ? '🟡 Conectando...' : '🔴 Desconectado'}
+        </div>
+        {wsError && (
+          <div className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded">
+            {wsError}
+          </div>
+        )}
+        {reconnectAttempts > 0 && (
+          <div className="mt-1 px-3 py-1 bg-yellow-600 text-white text-xs rounded">
+            Reintento {reconnectAttempts}/5
+          </div>
+        )}
+      </div>
+
+      {/* Lista de usuarios (sidebar) */}
+      <div className="w-1/4 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto shadow-lg">
         <h2 className="text-3xl font-bold mb-6 text-blue-400 border-b border-gray-700 pb-4">
           💬 Chats
         </h2>
@@ -455,6 +606,7 @@ const App: React.FC = () => {
                  No hay mensajes en este chat.
                </div>
              )}
+             
           </div>
         ) : (
                      <div className="text-center text-gray-400 text-lg bg-gray-800 rounded-xl p-12 border border-gray-700 shadow-lg relative z-10 m-6">
@@ -465,6 +617,15 @@ const App: React.FC = () => {
         )}
       </div>
     </div>
+  );
+};
+
+// Componente principal que envuelve AppContent con WebSocketProvider
+const App: React.FC = () => {
+  return (
+    <WebSocketProvider>
+      <AppContent />
+    </WebSocketProvider>
   );
 };
 

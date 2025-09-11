@@ -1,69 +1,101 @@
-# React + TypeScript + Vite
+# 🏈 SportBot Frontend - WebSocket Implementation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React con TypeScript para el asistente comercial SportBot, implementando conexión WebSocket persistente para comunicación en tiempo real con el backend.
 
-Currently, two official plugins are available:
+## 🚀 **Características**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✅ **React 19** con TypeScript
+- ✅ **WebSocket persistente** con reconexión automática
+- ✅ **Mensajes en tiempo real** (solo recepción)
+- ✅ **Heartbeat/ping-pong** para mantener conexión viva
+- ✅ **Manejo robusto de errores** y reconexión
+- ✅ **Indicador visual** del estado de conexión
+- ✅ **Tailwind CSS** para estilos modernos
+- ✅ **Vite** para desarrollo rápido
 
-## Expanding the ESLint configuration
+## 🔌 **WebSocket Features**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Conexión persistente** con el backend
+- **Reconexión automática** en caso de caída
+- **Sistema de heartbeat** para mantener la conexión viva
+- **Manejo de eventos** específicos por tipo de mensaje
+- **Context global** para estado WebSocket
+- **Hooks personalizados** para fácil integración
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠️ **Instalación y Configuración**
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### **1. Instalar dependencias**
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### **2. Configurar variables de entorno**
+```bash
+# Copiar archivo de ejemplo
+cp .env.example .env
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Editar configuración
+# Ver ENV_SETUP.md para más detalles
 ```
+
+### **3. Iniciar desarrollo**
+```bash
+npm run dev
+```
+
+### **4. Build para producción**
+```bash
+npm run build
+```
+
+## 📡 **Configuración WebSocket**
+
+### **Variables de entorno requeridas:**
+```env
+VITE_WEBSOCKET_URL=ws://localhost:8000/ws/chat
+VITE_WEBSOCKET_RECONNECT_INTERVAL=3000
+VITE_WEBSOCKET_MAX_RECONNECT_ATTEMPTS=5
+VITE_WEBSOCKET_HEARTBEAT_INTERVAL=30000
+```
+
+### **Uso básico:**
+```typescript
+import { useWebSocketContext } from './hooks/useWebSocketContext';
+
+const MyComponent = () => {
+  const { isConnected, onMessage } = useWebSocketContext();
+  
+  // Escuchar mensajes en tiempo real
+  onMessage((message) => {
+    console.log('Mensaje recibido:', message);
+    // Actualizar UI con nuevos mensajes
+  });
+  
+  return <div>Estado: {isConnected ? 'Conectado' : 'Desconectado'}</div>;
+};
+```
+
+## 📚 **Documentación**
+
+- **[ENV_SETUP.md](./ENV_SETUP.md)** - Configuración de variables de entorno
+- **[WEBSOCKET_IMPLEMENTATION.md](./WEBSOCKET_IMPLEMENTATION.md)** - Documentación completa de WebSocket
+- **[WEBSOCKET_TEST_GUIDE.md](./WEBSOCKET_TEST_GUIDE.md)** - Guía de pruebas y solución de problemas
+
+## 🏗️ **Arquitectura**
+
+```
+src/
+├── components/          # Componentes React
+├── contexts/           # Context providers (WebSocket)
+├── hooks/              # Hooks personalizados
+├── types/              # Tipos TypeScript
+├── config.ts           # Configuración centralizada
+└── App.tsx             # Componente principal
+```
+
+## 🔧 **Scripts disponibles**
+
+- `npm run dev` - Servidor de desarrollo
+- `npm run build` - Build para producción
+- `npm run preview` - Preview del build
+- `npm run lint` - Linter ESLint
