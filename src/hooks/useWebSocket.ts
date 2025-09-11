@@ -72,16 +72,15 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
       try {
         message = JSON.parse(event.data);
       } catch {
-        // Si no es JSON, es una respuesta de texto del backend
-        // Crear un mensaje estructurado para el chat
+        // Si no es JSON, asumir que es una notificación de cambio
         message = {
-          type: 'message',
+          type: 'chat_update',
           data: {
-            message: event.data,
-            isUser: false, // Mensaje del bot (por defecto)
+            message: 'Chat actualizado',
+            timestamp: new Date().toISOString()
           },
           timestamp: new Date().toISOString(),
-          userId: 1, // Usuario por defecto para el backend actual
+          userId: 1, // Usuario por defecto
         };
       }
       

@@ -33,7 +33,11 @@ Para que el frontend funcione correctamente, el backend debe enviar mensajes en 
 - **`timestamp`**: Fecha y hora en formato ISO (ej: "2024-01-01T10:30:00Z")
 - **`userId`**: ID del usuario que envía/recibe el mensaje
 
-## 🔧 **Implementación en el Backend**
+## 🔧 **Implementación Simplificada en el Backend**
+
+### **Nuevo Comportamiento (Simplificado):**
+
+El WebSocket ahora funciona como un **detector de cambios**. Solo necesita enviar una notificación cuando hay cambios en el chat.
 
 ### **Ejemplo en Python (FastAPI):**
 
@@ -50,50 +54,33 @@ async def websocket_chat(websocket: WebSocket):
             # Recibir mensaje del usuario
             user_message = await websocket.receive_text()
             
-            # IMPORTANTE: Enviar mensaje del usuario al frontend PRIMERO
-            user_msg = {
-                "type": "message",
+            # Procesar con el bot
+            bot_response = await langroid_service.process_message(message=user_message)
+            
+            # IMPORTANTE: Solo enviar notificación de cambio
+            change_notification = {
+                "type": "chat_update",
                 "data": {
-                    "message": user_message,
-                    "isUser": True
+                    "message": "Chat actualizado",
+                    "timestamp": datetime.now().isoformat()
                 },
                 "timestamp": datetime.now().isoformat() + "Z",
                 "userId": 123  # ID del usuario actual
             }
             
-            # Enviar mensaje del usuario al frontend
-            await websocket.send_text(json.dumps(user_msg))
-            
-            # Procesar con el bot
-            bot_response = await langroid_service.process_message(message=user_message)
-            
-            # Crear mensaje del bot
-            bot_msg = {
-                "type": "message",
-                "data": {
-                    "message": bot_response,
-                    "isUser": False
-                },
-                "timestamp": datetime.now().isoformat() + "Z",
-                "userId": 123  # Mismo usuario
-            }
-            
-            # Enviar respuesta del bot al frontend
-            await websocket.send_text(json.dumps(bot_msg))
+            # Enviar notificación de cambio al frontend
+            await websocket.send_text(json.dumps(change_notification))
             
     except WebSocketDisconnect:
         logger.info("WebSocket desconectado")
 ```
 
-### **⚠️ PROBLEMA ACTUAL:**
+### **✅ CÓMO FUNCIONA AHORA:**
 
-El backend actual solo envía respuestas del bot, pero **NO envía los mensajes del usuario**. Por eso el frontend solo muestra mensajes del bot.
-
-### **✅ SOLUCIÓN:**
-
-El backend debe enviar **AMBOS** tipos de mensajes:
-1. **Mensaje del usuario** (cuando el usuario envía algo)
-2. **Respuesta del bot** (cuando el bot responde)
+1. **Usuario envía mensaje** → Backend procesa
+2. **Backend envía notificación** → Frontend detecta cambio
+3. **Frontend recarga chat** → Muestra todos los mensajes actualizados
+4. **Sin duplicados** → Solo recarga completa del chat
 
 ## 📊 **Flujo Completo:**
 

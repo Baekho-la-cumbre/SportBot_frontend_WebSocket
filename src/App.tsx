@@ -240,102 +240,25 @@ const AppContent: React.FC = () => {
     //   "timestamp": "2024-01-01T10:30:00Z",
     //   "userId": 123
     // }
+    // Handler para mensajes WebSocket - Solo detecta cambios y recarga el chat
     const handleMessage = (message: WebSocketMessage) => {
       console.log('Mensaje WebSocket recibido:', message);
       
-      switch (message.type) {
-        case 'message':
-          if (message.data && 'message' in message.data && 'isUser' in message.data) {
-            // Nuevo mensaje de chat
-            const newChatMessage: ChatMessage = {
-              id: Date.now() + Math.random(), // ID único temporal
-              message: message.data.message,
-              timestamp: message.timestamp,
-              isUser: message.data.isUser || false,
-            };
-
-            // Función para verificar si el mensaje ya existe en el historial
-            const messageExistsInHistory = (userId: number, newMessage: ChatMessage) => {
-              const currentChatHistory = chatHistory[userId] || [];
-              
-              return currentChatHistory.some(existingMsg => {
-                // Comparar contenido del mensaje
-                const sameContent = existingMsg.message === newMessage.message;
-                
-                // Comparar si es del mismo tipo (usuario o bot)
-                const sameType = existingMsg.isUser === newMessage.isUser;
-                
-                // Comparar timestamps con tolerancia de 10 segundos
-                const existingTime = new Date(existingMsg.timestamp).getTime();
-                const newTime = new Date(newMessage.timestamp).getTime();
-                const timeDiff = Math.abs(existingTime - newTime);
-                const sameTime = timeDiff < 10000; // 10 segundos de tolerancia
-                
-                console.log(`Comparando mensajes:`);
-                console.log(`- Existente: "${existingMsg.message}" (${existingMsg.timestamp}) - Usuario: ${existingMsg.isUser}`);
-                console.log(`- Nuevo: "${newMessage.message}" (${newMessage.timestamp}) - Usuario: ${newMessage.isUser}`);
-                console.log(`- Mismo contenido: ${sameContent}, Mismo tipo: ${sameType}, Mismo tiempo: ${sameTime} (diff: ${timeDiff}ms)`);
-                
-                return sameContent && sameType && sameTime;
-              });
-            };
-
-            // Función para verificar si el mensaje es realmente nuevo (no del historial)
-            const isTrulyNewMessage = (newMessage: ChatMessage) => {
-              const now = new Date().getTime();
-              const messageTime = new Date(newMessage.timestamp).getTime();
-              const timeDiff = now - messageTime;
-              
-              // Solo considerar como nuevo si fue enviado en los últimos 60 segundos
-              // Esto permite que mensajes recientes se muestren, pero evita duplicados del historial
-              return timeDiff < 60000;
-            };
-
-            // Solo agregar mensajes que sean realmente nuevos y no existan en el historial
-            if (isTrulyNewMessage(newChatMessage)) {
-              // Si tenemos un userId específico, agregarlo a ese chat
-              if (message.userId) {
-                if (!messageExistsInHistory(message.userId, newChatMessage)) {
-                  console.log(`✅ NUEVO mensaje agregado al chat del usuario ${message.userId}:`, newChatMessage);
-                  setChatHistory(prev => ({
-                    ...prev,
-                    [message.userId!]: [...(prev[message.userId!] || []), newChatMessage]
-                  }));
-                  // Mostrar indicador de nuevo mensaje
-                  setNewMessageReceived(true);
-                  setTimeout(() => setNewMessageReceived(false), 3000);
-                } else {
-                  console.log(`❌ Mensaje ya existe en el historial, no se agrega al chat del usuario ${message.userId}`);
-                }
-              } else {
-                // Si no tenemos userId, agregar al chat seleccionado actualmente
-                if (selectedUserId) {
-                  if (!messageExistsInHistory(selectedUserId, newChatMessage)) {
-                    console.log(`✅ NUEVO mensaje agregado al chat seleccionado ${selectedUserId}:`, newChatMessage);
-                    setChatHistory(prev => ({
-                      ...prev,
-                      [selectedUserId]: [...(prev[selectedUserId] || []), newChatMessage]
-                    }));
-                    // Mostrar indicador de nuevo mensaje
-                    setNewMessageReceived(true);
-                    setTimeout(() => setNewMessageReceived(false), 3000);
-                  } else {
-                    console.log(`❌ Mensaje ya existe en el historial, no se agrega al chat seleccionado ${selectedUserId}`);
-                  }
-                } else {
-                  console.log('❌ No hay usuario seleccionado, mensaje no se puede agregar:', newChatMessage);
-                }
-              }
-            } else {
-              console.log(`⏰ Mensaje del historial (no es nuevo), no se agrega:`, newChatMessage);
-            }
-          }
-          break;
-        case 'notification':
-          console.log('Notificación recibida:', message.data);
-          break;
-        default:
-          console.log('Tipo de mensaje no manejado:', message.type);
+      // Solo procesar mensajes que indiquen cambios en el chat
+      if (message.type === 'message' || message.type === 'chat_update') {
+        console.log('🔄 Cambio detectado en el chat, recargando...');
+        
+        // Recargar el chat del usuario seleccionado
+        if (selectedUserId) {
+          console.log(`🔄 Recargando chat del usuario ${selectedUserId}`);
+          fetchUserChatHistory(selectedUserId);
+          
+          // Mostrar indicador de actualización
+          setNewMessageReceived(true);
+          setTimeout(() => setNewMessageReceived(false), 3000);
+        } else {
+          console.log('❌ No hay usuario seleccionado, no se puede recargar el chat');
+        }
       }
     };
 
