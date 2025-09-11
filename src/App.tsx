@@ -499,14 +499,14 @@ const AppContent: React.FC = () => {
     loadInitialData();
   }, []);
 
-  // Polling automático para detectar usuarios nuevos cada 10 segundos
+  // Polling automático para detectar usuarios nuevos cada 1 minuto
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected && !isUserRefreshingRef.current) {
         console.log('🔄 Polling automático: verificando usuarios nuevos...');
         fetchUsers();
       }
-    }, 10000); // Cada 10 segundos
+    }, 60000); // Cada 1 minuto (60 segundos)
 
     return () => clearInterval(interval);
   }, [isConnected]);

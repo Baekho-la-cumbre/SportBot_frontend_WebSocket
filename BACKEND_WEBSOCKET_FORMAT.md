@@ -106,7 +106,7 @@ async def websocket_chat(websocket: WebSocket):
 
 #### **Para cambios en los usuarios:**
 1. **Nuevo usuario se registra** → Backend procesa
-2. **Frontend detecta automáticamente** → Polling cada 10 segundos + WebSocket
+2. **Frontend detecta automáticamente** → Polling cada 1 minuto + WebSocket
 3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
 4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
 5. **Debouncing aplicado** → Evita bucles infinitos y mejora performance
@@ -162,7 +162,7 @@ El frontend ahora detecta usuarios nuevos de **3 formas automáticas**:
 - Ejemplos: `"Usuario nuevo registrado"`, `"Nuevo user"`, `"Usuario actualizado"`
 
 ### **2. Polling Automático:**
-- Verifica usuarios nuevos cada **10 segundos**
+- Verifica usuarios nuevos cada **1 minuto**
 - Compara IDs de usuarios actuales vs nuevos
 - Detecta automáticamente usuarios que aparecieron
 
