@@ -106,7 +106,7 @@ async def websocket_chat(websocket: WebSocket):
 
 #### **Para cambios en los usuarios:**
 1. **Nuevo usuario se registra** → Backend procesa
-2. **Frontend detecta automáticamente** → Polling cada 1 minuto + WebSocket
+2. **Frontend detecta automáticamente** → Polling unificado cada 30 segundos + WebSocket
 3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
 4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
 5. **Debouncing aplicado** → Evita bucles infinitos y mejora performance
@@ -146,30 +146,52 @@ Mensaje WebSocket recibido: {type: "user_update", data: {...}}
 👤 Cambio detectado en los usuarios, recargando con debouncing...
 ✅ Ejecutando refresh de usuarios...
 
+// Para usuarios nuevos (Polling unificado):
+🔄 Polling unificado: verificando mensajes y usuarios nuevos...
+🆕 Usuarios nuevos detectados en mensajes: [123, 456]
+✅ Ejecutando refresh de usuarios...
+
 // Para usuarios nuevos (Polling automático):
-🔄 Polling automático: verificando usuarios nuevos...
+🔄 Polling unificado: verificando mensajes y usuarios nuevos...
 🆕 Usuarios nuevos detectados automáticamente!
 ✅ Ejecutando refresh de usuarios...
 ```
 
-## 🧠 **Detección Automática de Usuarios Nuevos**
+## 🧠 **Sistema Unificado de Detección Automática**
 
-El frontend ahora detecta usuarios nuevos de **3 formas automáticas**:
+El frontend ahora detecta mensajes y usuarios nuevos de **3 formas automáticas** con detección progresiva:
 
 ### **1. WebSocket (Tiempo Real):**
 - Si el mensaje contiene: `"usuario"`, `"user"`, o `"nuevo"`
 - Se procesará como `user_update`
 - Ejemplos: `"Usuario nuevo registrado"`, `"Nuevo user"`, `"Usuario actualizado"`
 
-### **2. Polling Automático:**
-- Verifica usuarios nuevos cada **1 minuto**
+### **2. Polling Unificado:**
+- Verifica mensajes y usuarios nuevos cada **30 segundos**
 - Compara IDs de usuarios actuales vs nuevos
 - Detecta automáticamente usuarios que aparecieron
+- **Detección Progresiva**: Cuando encuentra mensajes nuevos, verifica si el usuario que los envió es nuevo
 
-### **3. Detección Inteligente:**
-- Compara la lista actual de usuarios con la nueva
-- Identifica IDs que no existían antes
+### **3. Detección Progresiva:**
+- Cuando encuentra mensajes nuevos, verifica si el usuario que los envió es nuevo
+- Compara IDs de usuarios en mensajes vs lista actual de usuarios
+- Si encuentra un usuario nuevo en los mensajes, automáticamente actualiza la lista de usuarios
 - Muestra indicador visual automáticamente
+
+## 🔄 **Flujo Unificado de Detección**
+
+```
+1. Polling cada 30 segundos:
+   ├── Verifica usuarios nuevos (fetchUsers)
+   ├── Verifica mensajes nuevos (fetchUserChatHistory)
+   └── Si encuentra mensajes de usuarios no listados:
+       └── Automáticamente actualiza lista de usuarios
+       
+2. WebSocket en tiempo real:
+   ├── Detecta cambios de chat (chat_update)
+   ├── Detecta cambios de usuarios (user_update)
+   └── Trigger inmediato de recarga correspondiente
+```
 
 ### **Para chats:**
 - Cualquier otro mensaje se procesará como `chat_update`

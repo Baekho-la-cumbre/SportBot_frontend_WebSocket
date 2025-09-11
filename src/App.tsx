@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { config } from './config';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { useWebSocketContext } from './hooks/useWebSocketContext';
-import type { WebSocketMessage, UserUpdate, ChatUpdate } from './types/websocket';
+import type { WebSocketMessage, UserUpdate, ChatUpdate, ChatMessage } from './types/websocket';
 
 // Definir tipos TypeScript basados en los endpoints reales del backend
 interface User {
@@ -27,13 +27,7 @@ interface ChatSummary {
   fechaActualizcion: string;
 }
 
-interface ChatMessage {
-  id: number;
-  message: string;
-  timestamp: string;
-  isUser: boolean;
-  // Otros campos que pueda tener el mensaje
-}
+// ChatMessage se importa desde types/websocket.ts
 
 interface ChatHistory {
   [key: number]: ChatMessage[];
@@ -236,7 +230,9 @@ const AppContent: React.FC = () => {
               id: index + 1,
               message: msg.contenido,
               timestamp: msg.timestamp,
-              isUser: msg.tipo === 'usuario'
+              isUser: msg.tipo === 'usuario',
+              userId: msg.tipo === 'usuario' ? userId : undefined,
+              chatId: `chat_${chat.id}`
             }));
             
             allMessages.push(...processedMessages);
@@ -259,7 +255,9 @@ const AppContent: React.FC = () => {
           id: 1,
           message: `Este es un mensaje de prueba para el usuario ${userId}. Los endpoints de chat no están devolviendo datos.`,
           timestamp: new Date().toISOString(),
-          isUser: false
+          isUser: false,
+          userId: userId,
+          chatId: `chat_${userId}`
         };
         allMessages.push(testMessage);
       }
@@ -271,11 +269,22 @@ const AppContent: React.FC = () => {
         [userId]: allMessages
       }));
 
+      // Detectar si hay mensajes de usuarios que no están en la lista actual
+      const messageUserIds = new Set(allMessages.map(msg => msg.userId).filter((id): id is number => id !== undefined));
+      const currentUserIds = new Set(users.map(user => user.id));
+      const newUserIds = Array.from(messageUserIds).filter(id => !currentUserIds.has(id));
+      
+      if (newUserIds.length > 0) {
+        console.log('🆕 Usuarios nuevos detectados en mensajes:', newUserIds);
+        // Trigger refresh de usuarios para incluir los nuevos
+        debouncedRefreshUsers();
+      }
+
     } catch (err) {
       console.error('Error fetching user chat history:', err);
       setError('Error al cargar el historial del chat');
     }
-  }, [chatSummaries]);
+  }, [chatSummaries, users, debouncedRefreshUsers]);
 
   // Función para formatear fecha como WhatsApp
   const formatMessageDate = (timestamp: string) => {
@@ -499,17 +508,24 @@ const AppContent: React.FC = () => {
     loadInitialData();
   }, []);
 
-  // Polling automático para detectar usuarios nuevos cada 1 minuto
+  // Polling unificado para detectar mensajes y usuarios nuevos cada 30 segundos
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected && !isUserRefreshingRef.current) {
-        console.log('🔄 Polling automático: verificando usuarios nuevos...');
+        console.log('🔄 Polling unificado: verificando mensajes y usuarios nuevos...');
+        
+        // Verificar usuarios nuevos (que pueden haber enviado mensajes)
         fetchUsers();
+        
+        // Si hay un usuario seleccionado, también verificar sus mensajes
+        if (selectedUserId) {
+          fetchUserChatHistory(selectedUserId);
+        }
       }
-    }, 60000); // Cada 1 minuto (60 segundos)
+    }, 30000); // Cada 30 segundos
 
     return () => clearInterval(interval);
-  }, [isConnected]);
+  }, [isConnected, selectedUserId]);
 
   // Cargar historial de chat cuando se selecciona un usuario
   useEffect(() => {
