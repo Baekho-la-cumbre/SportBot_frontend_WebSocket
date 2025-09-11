@@ -55,12 +55,12 @@ const AppContent: React.FC = () => {
   const [newUserReceived, setNewUserReceived] = useState(false);
   
   // Referencias para debouncing y prevenir bucles infinitos
-  const refreshTimeoutRef = useRef<any>(null);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefreshTimeRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
   
   // Referencias para debouncing de usuarios
-  const userRefreshTimeoutRef = useRef<any>(null);
+  const userRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUserRefreshTimeRef = useRef<number>(0);
   const isUserRefreshingRef = useRef<boolean>(false);
 
@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
   } = useWebSocketContext();
 
   // Función para obtener todos los usuarios
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch(config.USERS_ENDPOINT);
       if (!response.ok) {
@@ -101,10 +101,10 @@ const AppContent: React.FC = () => {
       console.error('Error fetching users:', err);
       setError('Error al cargar la lista de usuarios');
     }
-  };
+  }, [users]);
 
   // Función para obtener todos los chats (admin)
-  const fetchAllChats = async () => {
+  const fetchAllChats = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:8000/api/v1/admin/chats/');
       if (!response.ok) {
@@ -116,7 +116,7 @@ const AppContent: React.FC = () => {
       console.error('Error fetching all chats:', err);
       setError('Error al cargar los chats');
     }
-  };
+  }, []);
 
   // Función con debouncing para evitar bucles infinitos
   const debouncedRefreshChats = useCallback(() => {
@@ -153,7 +153,7 @@ const AppContent: React.FC = () => {
     fetchAllChats().finally(() => {
       isRefreshingRef.current = false;
     });
-  }, []);
+  }, [fetchAllChats]);
 
   // Función con debouncing para usuarios (similar a chats)
   const debouncedRefreshUsers = useCallback(() => {
@@ -190,7 +190,7 @@ const AppContent: React.FC = () => {
     fetchUsers().finally(() => {
       isUserRefreshingRef.current = false;
     });
-  }, []);
+  }, [fetchUsers]);
 
   // Función para obtener el historial de chat de un usuario específico
   const fetchUserChatHistory = useCallback(async (userId: number) => {
@@ -269,35 +269,21 @@ const AppContent: React.FC = () => {
         [userId]: allMessages
       }));
 
-      // LÓGICA CONDICIONAL: Solo verificar usuarios si hay mensajes nuevos
+      // Verificar si hay mensajes nuevos
       const previousMessages = chatHistory[userId] || [];
       const hasNewMessages = allMessages.length > previousMessages.length;
       
       if (hasNewMessages) {
-        console.log('💬 Mensajes nuevos detectados, verificando usuarios...');
-        
-        // Detectar si hay mensajes de usuarios que no están en la lista actual
-        const messageUserIds = new Set(allMessages.map(msg => msg.userId).filter((id): id is number => id !== undefined));
-        const currentUserIds = new Set(users.map(user => user.id));
-        const newUserIds = Array.from(messageUserIds).filter(id => !currentUserIds.has(id));
-        
-        if (newUserIds.length > 0) {
-          console.log('🆕 Usuario nuevo detectado en mensajes:', newUserIds);
-          console.log('👤 Actualizando lista de usuarios automáticamente...');
-          // Trigger refresh de usuarios para incluir los nuevos
-          debouncedRefreshUsers();
-        } else {
-          console.log('✅ Todos los usuarios de los mensajes ya están en el landing');
-        }
+        console.log('💬 Mensajes nuevos detectados y cargados');
       } else {
-        console.log('📝 No hay mensajes nuevos, saltando verificación de usuarios');
+        console.log('📝 No hay mensajes nuevos');
       }
 
     } catch (err) {
       console.error('Error fetching user chat history:', err);
       setError('Error al cargar el historial del chat');
     }
-  }, [chatSummaries, users, debouncedRefreshUsers]);
+  }, [chatSummaries, chatHistory]);
 
   // Función para formatear fecha como WhatsApp
   const formatMessageDate = (timestamp: string) => {
@@ -498,7 +484,7 @@ const AppContent: React.FC = () => {
     onChatUpdate(handleChatUpdate);
     onUserUpdate(handleUserUpdate);
     onNotification(handleNotification);
-  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, chatHistory]);
+  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, debouncedRefreshChats, debouncedRefreshUsers, fetchUserChatHistory]);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -519,7 +505,7 @@ const AppContent: React.FC = () => {
     };
 
     loadInitialData();
-  }, []);
+  }, [fetchUsers, fetchAllChats]);
 
   // Polling para detectar mensajes nuevos cada 30 segundos
   useEffect(() => {
@@ -527,15 +513,19 @@ const AppContent: React.FC = () => {
       if (isConnected && !isUserRefreshingRef.current) {
         console.log('🔄 Polling: verificando mensajes nuevos...');
         
-        // Solo verificar mensajes - la verificación de usuarios será condicional
+        // Verificar mensajes
         if (selectedUserId) {
           fetchUserChatHistory(selectedUserId);
         }
+        
+        // Siempre verificar usuarios después de verificar mensajes
+        console.log('👥 Verificando usuarios...');
+        fetchUsers();
       }
     }, 30000); // Cada 30 segundos
 
     return () => clearInterval(interval);
-  }, [isConnected, selectedUserId]);
+  }, [isConnected, selectedUserId, fetchUserChatHistory, fetchUsers]);
 
   // Cargar historial de chat cuando se selecciona un usuario
   useEffect(() => {
