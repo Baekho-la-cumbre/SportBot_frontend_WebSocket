@@ -78,7 +78,7 @@ export const useWebSocket = (config: WebSocketConfig): UseWebSocketReturn => {
           type: 'message',
           data: {
             message: event.data,
-            isUser: false, // Mensaje del bot
+            isUser: false, // Mensaje del bot (por defecto)
           },
           timestamp: new Date().toISOString(),
           userId: undefined, // Se determinará en el handler
