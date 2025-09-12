@@ -565,9 +565,52 @@ const AppContent: React.FC = () => {
       const mostRecent = userChats.sort((a, b) => 
         new Date(b.fechaActualizcion).getTime() - new Date(a.fechaActualizcion).getTime()
       )[0];
-      return mostRecent.fechaActualizcion;
+      return formatLastMessageDate(mostRecent.fechaActualizcion);
     }
     return '';
+  };
+
+  // Función para formatear la fecha del último mensaje de forma más legible
+  const formatLastMessageDate = (timestamp: string) => {
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+
+    if (messageDay.getTime() === today.getTime()) {
+      return `Hoy ${messageDate.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })}`;
+    } else if (messageDay.getTime() === yesterday.getTime()) {
+      return `Ayer ${messageDate.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })}`;
+    } else {
+      return messageDate.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
+  };
+
+  // Función para convertir markdown a texto normal con negrita aplicada
+  const formatMessageText = (text: string) => {
+    // Convertir **texto** a <strong>texto</strong>
+    const boldText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convertir *texto* a <em>texto</em> (cursiva)
+    const italicText = boldText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    return italicText;
   };
 
 
@@ -673,11 +716,14 @@ const AppContent: React.FC = () => {
                onClick={() => setSelectedUserId(user.id)}
              >
                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mr-4 flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-blue-300/30">
-                  {getUserName(user).charAt(0)}
+                  {getUserName(user).charAt(0).toUpperCase()}
                 </div>
                <div className="flex-1 min-w-0">
                  <p className="font-semibold text-lg text-white truncate">{getUserName(user)}</p>
-                 <p className="text-sm text-gray-200 truncate">{getLastMessage(user.id)}</p>
+                 <p 
+                   className="text-sm text-gray-200 truncate"
+                   dangerouslySetInnerHTML={{ __html: formatMessageText(getLastMessage(user.id)) }}
+                 />
                  <p className="text-xs text-gray-300 mt-1">{getLastMessageDate(user.id)}</p>
                </div>
              </div>
@@ -702,7 +748,7 @@ const AppContent: React.FC = () => {
                            <div className="bg-gray-800 rounded-xl p-4 mb-6 shadow-lg border border-gray-700">
                <h2 className="text-2xl font-bold text-blue-400 flex items-center">
                  <span className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3 shadow-lg">
-                   {selectedUser ? getUserName(selectedUser).charAt(0) : '?'}
+                   {selectedUser ? getUserName(selectedUser).charAt(0).toUpperCase() : '?'}
                  </span>
                  <div>
                    <div>Chat con {selectedUser ? getUserName(selectedUser) : 'Usuario'}</div>
@@ -744,7 +790,7 @@ const AppContent: React.FC = () => {
                        >
                         <div className="flex items-center mb-2">
                           <span className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2 shadow-sm">
-                            {msg.isUser ? (selectedUser ? getUserName(selectedUser).charAt(0) : '?') : "🤖"}
+                            {msg.isUser ? (selectedUser ? getUserName(selectedUser).charAt(0).toUpperCase() : '?') : "🤖"}
                           </span>
                           <p className="text-sm font-semibold">
                             {msg.isUser ? (selectedUser ? getUserName(selectedUser) : 'Usuario') : "IA"}
@@ -760,9 +806,8 @@ const AppContent: React.FC = () => {
                              display: 'block',
                              height: 'auto'
                            }}
-                         >
-                           {msg.message}
-                         </div>
+                           dangerouslySetInnerHTML={{ __html: formatMessageText(msg.message) }}
+                         />
                         {/* Solo la hora del mensaje */}
                         <p className={`text-xs mt-3 opacity-70 ${msg.isUser ? "text-blue-100" : "text-gray-400"}`}>
                           {formatMessageTime(msg.timestamp)}
