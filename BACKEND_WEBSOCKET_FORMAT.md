@@ -106,7 +106,7 @@ async def websocket_chat(websocket: WebSocket):
 
 #### **Para cambios en los usuarios:**
 1. **Nuevo usuario se registra** → Backend procesa
-2. **Frontend detecta automáticamente** → Polling cada 1 minuto + WebSocket
+2. **Frontend detecta automáticamente** → Polling condicional cada 30 segundos + WebSocket
 3. **Frontend recarga usuarios** → Muestra todos los usuarios actualizados
 4. **Usuarios nuevos aparecen** → Sin necesidad de recargar la página
 5. **Debouncing aplicado** → Evita bucles infinitos y mejora performance
@@ -146,30 +146,60 @@ Mensaje WebSocket recibido: {type: "user_update", data: {...}}
 👤 Cambio detectado en los usuarios, recargando con debouncing...
 ✅ Ejecutando refresh de usuarios...
 
-// Para usuarios nuevos (Polling automático):
-🔄 Polling automático: verificando usuarios nuevos...
+// Para mensajes y usuarios nuevos (Polling independiente):
+🔄 Polling: verificando mensajes nuevos...
+💬 Mensajes nuevos detectados y cargados
+👥 Verificando usuarios...
 🆕 Usuarios nuevos detectados automáticamente!
 ✅ Ejecutando refresh de usuarios...
+
+// Para cuando no hay mensajes nuevos:
+🔄 Polling: verificando mensajes nuevos...
+📝 No hay mensajes nuevos
+👥 Verificando usuarios...
+✅ Ejecutando refresh de usuarios...
+
+// Sistema independiente:
+- Mensajes y usuarios se verifican por separado
+- Cada verificación de mensajes incluye verificación de usuarios
+- Lógica simple y clara
+- Funciona como antes pero más organizado
 ```
 
-## 🧠 **Detección Automática de Usuarios Nuevos**
+## 🧠 **Sistema Unificado de Detección Automática**
 
-El frontend ahora detecta usuarios nuevos de **3 formas automáticas**:
+El frontend ahora detecta mensajes y usuarios nuevos de **3 formas automáticas** con detección progresiva:
 
 ### **1. WebSocket (Tiempo Real):**
 - Si el mensaje contiene: `"usuario"`, `"user"`, o `"nuevo"`
 - Se procesará como `user_update`
 - Ejemplos: `"Usuario nuevo registrado"`, `"Nuevo user"`, `"Usuario actualizado"`
 
-### **2. Polling Automático:**
-- Verifica usuarios nuevos cada **1 minuto**
-- Compara IDs de usuarios actuales vs nuevos
-- Detecta automáticamente usuarios que aparecieron
+### **2. Polling Independiente:**
+- Verifica mensajes nuevos cada **30 segundos**
+- **Acciones Separadas**: Mensajes y usuarios se verifican independientemente
+- **Verificación Automática**: Cada vez que se verifican mensajes, también se verifican usuarios
+- **Simplicidad**: Dos procesos claros y separados que funcionan juntos
 
-### **3. Detección Inteligente:**
-- Compara la lista actual de usuarios con la nueva
-- Identifica IDs que no existían antes
+### **3. Detección Progresiva:**
+- Cuando encuentra mensajes nuevos, verifica si el usuario que los envió es nuevo
+- Compara IDs de usuarios en mensajes vs lista actual de usuarios
+- Si encuentra un usuario nuevo en los mensajes, automáticamente actualiza la lista de usuarios
 - Muestra indicador visual automáticamente
+
+## 🔄 **Flujo Independiente de Detección**
+
+```
+1. Polling cada 30 segundos:
+   ├── Verifica mensajes nuevos (fetchUserChatHistory)
+   ├── Verifica usuarios nuevos (fetchUsers)
+   └── Ambas acciones son independientes pero se ejecutan juntas
+       
+2. WebSocket en tiempo real:
+   ├── Detecta cambios de chat (chat_update)
+   ├── Detecta cambios de usuarios (user_update)
+   └── Trigger inmediato de recarga correspondiente
+```
 
 ### **Para chats:**
 - Cualquier otro mensaje se procesará como `chat_update`
