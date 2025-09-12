@@ -613,6 +613,19 @@ const AppContent: React.FC = () => {
     return italicText;
   };
 
+  // Función para obtener el avatar del usuario (letra o emoji por defecto)
+  const getUserAvatar = (user: User) => {
+    const userName = getUserName(user);
+    // Verificar si el nombre contiene al menos un carácter de texto (letra)
+    const hasTextChar = /[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/.test(userName);
+    
+    if (hasTextChar) {
+      return userName.charAt(0).toUpperCase();
+    } else {
+      return '👤'; // Emoji por defecto
+    }
+  };
+
 
   if (loading) {
     return (
@@ -716,7 +729,7 @@ const AppContent: React.FC = () => {
                onClick={() => setSelectedUserId(user.id)}
              >
                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mr-4 flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-blue-300/30">
-                  {getUserName(user).charAt(0).toUpperCase()}
+                  {getUserAvatar(user)}
                 </div>
                <div className="flex-1 min-w-0">
                  <p className="font-semibold text-lg text-white truncate">{getUserName(user)}</p>
@@ -748,7 +761,7 @@ const AppContent: React.FC = () => {
                            <div className="bg-gray-800 rounded-xl p-4 mb-6 shadow-lg border border-gray-700">
                <h2 className="text-2xl font-bold text-blue-400 flex items-center">
                  <span className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-3 shadow-lg">
-                   {selectedUser ? getUserName(selectedUser).charAt(0).toUpperCase() : '?'}
+                   {selectedUser ? getUserAvatar(selectedUser) : '?'}
                  </span>
                  <div>
                    <div>Chat con {selectedUser ? getUserName(selectedUser) : 'Usuario'}</div>
@@ -790,7 +803,7 @@ const AppContent: React.FC = () => {
                        >
                         <div className="flex items-center mb-2">
                           <span className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2 shadow-sm">
-                            {msg.isUser ? (selectedUser ? getUserName(selectedUser).charAt(0).toUpperCase() : '?') : "🤖"}
+                            {msg.isUser ? (selectedUser ? getUserAvatar(selectedUser) : '?') : "🤖"}
                           </span>
                           <p className="text-sm font-semibold">
                             {msg.isUser ? (selectedUser ? getUserName(selectedUser) : 'Usuario') : "IA"}
