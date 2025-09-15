@@ -275,7 +275,7 @@ const AppContent: React.FC = () => {
       console.error('Error fetching user chat history:', err);
       setError('Error al cargar el historial del chat');
     }
-  }, [chatSummaries]);
+  }, []);
 
   // Función para formatear fecha como WhatsApp
   const formatMessageDate = (timestamp: string) => {
@@ -471,12 +471,20 @@ const AppContent: React.FC = () => {
       // Aquí podrías mostrar notificaciones toast o actualizar el estado
     };
 
-    // Registrar event listeners
-    onMessage(handleMessage);
-    onChatUpdate(handleChatUpdate);
-    onUserUpdate(handleUserUpdate);
-    onNotification(handleNotification);
-  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, chatHistory]);
+    // Registrar event listeners y retornar cleanup function
+    const cleanupMessage = onMessage(handleMessage);
+    const cleanupChatUpdate = onChatUpdate(handleChatUpdate);
+    const cleanupUserUpdate = onUserUpdate(handleUserUpdate);
+    const cleanupNotification = onNotification(handleNotification);
+
+    // Cleanup function para remover event listeners
+    return () => {
+      if (cleanupMessage) cleanupMessage();
+      if (cleanupChatUpdate) cleanupChatUpdate();
+      if (cleanupUserUpdate) cleanupUserUpdate();
+      if (cleanupNotification) cleanupNotification();
+    };
+  }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, debouncedRefreshChats, debouncedRefreshUsers, fetchUserChatHistory]);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -516,7 +524,7 @@ const AppContent: React.FC = () => {
     if (selectedUserId) {
       fetchUserChatHistory(selectedUserId);
     }
-  }, [selectedUserId, fetchUserChatHistory]);
+  }, [selectedUserId, chatSummaries, fetchUserChatHistory]);
 
   // Marcar como leído cuando se selecciona un usuario
   useEffect(() => {
