@@ -69,6 +69,9 @@ const AppContent: React.FC = () => {
   const userRefreshTimeoutRef = useRef<any>(null);
   const lastUserRefreshTimeRef = useRef<number>(0);
   const isUserRefreshingRef = useRef<boolean>(false);
+  
+  // Referencia para evitar bucles infinitos en la carga de historiales
+  const loadedUsersRef = useRef<Set<number>>(new Set());
 
   // WebSocket context
   const {
@@ -155,6 +158,9 @@ const AppContent: React.FC = () => {
     console.log('✅ Ejecutando refresh de chats...');
     isRefreshingRef.current = true;
     lastRefreshTimeRef.current = now;
+    
+    // Limpiar la referencia de usuarios cargados para permitir recargas
+    loadedUsersRef.current.clear();
     
     fetchAllChats().finally(() => {
       isRefreshingRef.current = false;
@@ -275,7 +281,7 @@ const AppContent: React.FC = () => {
       console.error('Error fetching user chat history:', err);
       setError('Error al cargar el historial del chat');
     }
-  }, []);
+  }, [chatSummaries]);
 
   // Función para formatear fecha como WhatsApp
   const formatMessageDate = (timestamp: string) => {
@@ -524,7 +530,25 @@ const AppContent: React.FC = () => {
     if (selectedUserId) {
       fetchUserChatHistory(selectedUserId);
     }
-  }, [selectedUserId, chatSummaries, fetchUserChatHistory]);
+  }, [selectedUserId, fetchUserChatHistory]);
+
+  // Cargar historial de todos los usuarios cuando se actualicen los chatSummaries
+  // Esto permite mostrar mensajes nuevos en el landing sin causar bucles infinitos
+  useEffect(() => {
+    if (chatSummaries.length > 0) {
+      // Obtener todos los usuarios únicos que tienen chats
+      const userIdsWithChats = [...new Set(chatSummaries.map(chat => chat.usuarioId))];
+      
+      // Cargar historial para cada usuario (solo si no está ya cargado)
+      userIdsWithChats.forEach(userId => {
+        if (!loadedUsersRef.current.has(userId)) {
+          console.log(`🔄 Cargando historial para usuario ${userId} (actualización de chatSummaries)`);
+          loadedUsersRef.current.add(userId);
+          fetchUserChatHistory(userId);
+        }
+      });
+    }
+  }, [chatSummaries, fetchUserChatHistory]); // Solo depende de chatSummaries y fetchUserChatHistory
 
   // Marcar como leído cuando se selecciona un usuario
   useEffect(() => {
