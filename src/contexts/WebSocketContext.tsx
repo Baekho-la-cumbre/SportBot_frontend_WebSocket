@@ -18,11 +18,11 @@ interface WebSocketContextType {
   disconnect: () => void;
 
   // Event listeners
-  onMessage: (handler: WebSocketEventHandler) => void;
-  onChatUpdate: (handler: WebSocketEventHandler) => void;
-  onUserUpdate: (handler: WebSocketEventHandler) => void;
-  onNotification: (handler: WebSocketEventHandler) => void;
-  onError: (handler: WebSocketEventHandler) => void;
+  onMessage: (handler: WebSocketEventHandler) => () => void;
+  onChatUpdate: (handler: WebSocketEventHandler) => () => void;
+  onUserUpdate: (handler: WebSocketEventHandler) => () => void;
+  onNotification: (handler: WebSocketEventHandler) => () => void;
+  onError: (handler: WebSocketEventHandler) => () => void;
 
   // Funciones de utilidad (solo para recibir, no enviar)
 }

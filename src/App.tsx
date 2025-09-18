@@ -485,10 +485,10 @@ const AppContent: React.FC = () => {
 
     // Cleanup function para remover event listeners
     return () => {
-      if (cleanupMessage) cleanupMessage();
-      if (cleanupChatUpdate) cleanupChatUpdate();
-      if (cleanupUserUpdate) cleanupUserUpdate();
-      if (cleanupNotification) cleanupNotification();
+      cleanupMessage();
+      cleanupChatUpdate();
+      cleanupUserUpdate();
+      cleanupNotification();
     };
   }, [onMessage, onChatUpdate, onUserUpdate, onNotification, selectedUserId, debouncedRefreshChats, debouncedRefreshUsers, fetchUserChatHistory]);
 
@@ -742,7 +742,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Lista de usuarios (sidebar) */}
-      <div className="w-1/4 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto shadow-lg">
+      <div className="w-1/4 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto shadow-lg custom-scrollbar">
         <h2 className="text-3xl font-bold mb-6 text-blue-400 border-b border-gray-700 pb-4">
           💬 Chats
         </h2>
@@ -777,7 +777,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Historial de chat */}
-      <div className="w-3/4 bg-gray-900 overflow-y-auto relative">
+      <div className="w-3/4 bg-gray-900 overflow-y-auto relative custom-scrollbar">
         {/* Fondo con imagen personalizada - FIXED para scroll */}
         <div className="fixed inset-0 opacity-20 pointer-events-none" style={{ left: '25%' }}>
           <div className="absolute inset-0" style={{
