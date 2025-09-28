@@ -25,11 +25,13 @@ Frontend React con TypeScript para el asistente comercial SportBot, implementand
 ## 🛠️ **Instalación y Configuración**
 
 ### **1. Instalar dependencias**
+
 ```bash
 npm install
 ```
 
 ### **2. Configurar variables de entorno**
+
 ```bash
 # Copiar archivo de ejemplo
 cp .env.example .env
@@ -39,39 +41,32 @@ cp .env.example .env
 ```
 
 ### **3. Iniciar desarrollo**
+
 ```bash
 npm run dev
 ```
 
 ### **4. Build para producción**
+
 ```bash
 npm run build
 ```
 
-## 📡 **Configuración WebSocket**
-
-### **Variables de entorno requeridas:**
-```env
-VITE_WEBSOCKET_URL=ws://localhost:8000/ws/chat
-VITE_WEBSOCKET_RECONNECT_INTERVAL=3000
-VITE_WEBSOCKET_MAX_RECONNECT_ATTEMPTS=5
-VITE_WEBSOCKET_HEARTBEAT_INTERVAL=30000
-```
-
 ### **Uso básico:**
+
 ```typescript
-import { useWebSocketContext } from './hooks/useWebSocketContext';
+import { useWebSocketContext } from "./hooks/useWebSocketContext";
 
 const MyComponent = () => {
   const { isConnected, onMessage } = useWebSocketContext();
-  
+
   // Escuchar mensajes en tiempo real
   onMessage((message) => {
-    console.log('Mensaje recibido:', message);
+    console.log("Mensaje recibido:", message);
     // Actualizar UI con nuevos mensajes
   });
-  
-  return <div>Estado: {isConnected ? 'Conectado' : 'Desconectado'}</div>;
+
+  return <div>Estado: {isConnected ? "Conectado" : "Desconectado"}</div>;
 };
 ```
 
